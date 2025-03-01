@@ -350,3 +350,34 @@ def init_sample_data():
 
 with app.app_context():
     init_sample_data()
+
+@app.route('/orders')
+@login_required
+def order_history():
+    orders = Order.query.filter_by(user_id=current_user.id)\
+        .order_by(Order.created_at.desc())\
+        .all()
+    return render_template('orders/history.html', orders=orders)
+
+@app.route('/order/<int:order_id>')
+@login_required
+def order_details(order_id):
+    order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+
+    # Get cart items from the session for this order
+    cart = session.get('cart', {})
+    order_items = []
+
+    for item_id, item_data in cart.items():
+        if item_data['restaurant_id'] == order.restaurant_id:
+            total = item_data['price'] * item_data['quantity']
+            order_items.append({
+                'name': item_data['name'],
+                'quantity': item_data['quantity'],
+                'price': item_data['price'],
+                'total': total
+            })
+
+    return render_template('orders/details.html', 
+                         order=order, 
+                         order_items=order_items)
