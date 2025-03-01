@@ -8,26 +8,26 @@
 
 <div class="row">
     <div class="col-md-3">
-        <div class="list-group mb-4">
+        <div class="list-group mb-4 sticky-top" style="top: 20px;">
             <a href="#main-dishes" class="list-group-item list-group-item-action">Main Dishes</a>
             <a href="#beverages" class="list-group-item list-group-item-action">Beverages</a>
             <a href="#desserts" class="list-group-item list-group-item-action">Desserts</a>
         </div>
     </div>
-    
+
     <div class="col-md-9">
         <div id="main-dishes" class="mb-5">
             <h2 class="mb-4">Main Dishes</h2>
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 {% for item in menu_items if item.category == 'main' %}
                 <div class="col">
-                    <div class="card h-100">
-                        <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}">
+                    <div class="card menu-item-card h-100">
+                        <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}" loading="lazy">
                         <div class="card-body">
                             <h5 class="card-title">{{ item.name }}</h5>
                             <p class="card-text">{{ item.description }}</p>
-                            <p class="card-text"><strong>Rs. {{ "%.2f"|format(item.price) }}</strong></p>
-                            <button class="btn btn-primary">Add to Order</button>
+                            <div class="menu-item-price">Rs. {{ "%.2f"|format(item.price) }}</div>
+                            <button class="btn btn-primary add-to-order">Add to Order</button>
                         </div>
                     </div>
                 </div>
@@ -40,13 +40,13 @@
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 {% for item in menu_items if item.category == 'beverage' %}
                 <div class="col">
-                    <div class="card h-100">
-                        <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}">
+                    <div class="card menu-item-card h-100">
+                        <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}" loading="lazy">
                         <div class="card-body">
                             <h5 class="card-title">{{ item.name }}</h5>
                             <p class="card-text">{{ item.description }}</p>
-                            <p class="card-text"><strong>Rs. {{ "%.2f"|format(item.price) }}</strong></p>
-                            <button class="btn btn-primary">Add to Order</button>
+                            <div class="menu-item-price">Rs. {{ "%.2f"|format(item.price) }}</div>
+                            <button class="btn btn-primary add-to-order">Add to Order</button>
                         </div>
                     </div>
                 </div>
@@ -59,13 +59,13 @@
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 {% for item in menu_items if item.category == 'dessert' %}
                 <div class="col">
-                    <div class="card h-100">
-                        <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}">
+                    <div class="card menu-item-card h-100">
+                        <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.name }}" loading="lazy">
                         <div class="card-body">
                             <h5 class="card-title">{{ item.name }}</h5>
                             <p class="card-text">{{ item.description }}</p>
-                            <p class="card-text"><strong>Rs. {{ "%.2f"|format(item.price) }}</strong></p>
-                            <button class="btn btn-primary">Add to Order</button>
+                            <div class="menu-item-price">Rs. {{ "%.2f"|format(item.price) }}</div>
+                            <button class="btn btn-primary add-to-order">Add to Order</button>
                         </div>
                     </div>
                 </div>
