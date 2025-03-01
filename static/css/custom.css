@@ -1,0 +1,25 @@
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.list-group-item {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-border-color);
+}
+
+.list-group-item:hover {
+    background-color: var(--bs-primary);
+}
