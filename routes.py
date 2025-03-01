@@ -354,30 +354,35 @@ with app.app_context():
 @app.route('/orders')
 @login_required
 def order_history():
-    orders = Order.query.filter_by(user_id=current_user.id)\
-        .order_by(Order.created_at.desc())\
-        .all()
-    return render_template('orders/history.html', orders=orders)
+    try:
+        orders = Order.query.filter_by(user_id=current_user.id)\
+            .order_by(Order.created_at.desc())\
+            .all()
+        return render_template('orders/history.html', orders=orders)
+    except Exception as e:
+        logging.error(f"Error fetching order history: {str(e)}")
+        flash('Error loading order history')
+        return redirect(url_for('index'))
 
 @app.route('/order/<int:order_id>')
 @login_required
 def order_details(order_id):
-    order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
-
-    # Get cart items from the session for this order
-    cart = session.get('cart', {})
-    order_items = []
-
-    for item_id, item_data in cart.items():
-        if item_data['restaurant_id'] == order.restaurant_id:
-            total = item_data['price'] * item_data['quantity']
-            order_items.append({
-                'name': item_data['name'],
-                'quantity': item_data['quantity'],
-                'price': item_data['price'],
-                'total': total
+    try:
+        order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+        order_items = Order.query.join(MenuItem).filter(Order.id == order_id).all()
+        order_items_list = []
+        for item in order_items:
+             order_items_list.append({
+                'name': item.menu_item.name,
+                'quantity': item.quantity,
+                'price': item.menu_item.price,
+                'total': item.menu_item.price * item.quantity
             })
 
-    return render_template('orders/details.html', 
-                         order=order, 
-                         order_items=order_items)
+        return render_template('orders/details.html', 
+                            order=order,
+                            order_items=order_items_list)
+    except Exception as e:
+        logging.error(f"Error fetching order details: {str(e)}")
+        flash('Error loading order details')
+        return redirect(url_for('order_history'))

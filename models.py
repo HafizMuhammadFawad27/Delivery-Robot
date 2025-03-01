@@ -25,6 +25,7 @@ class Restaurant(db.Model):
     description = db.Column(db.Text)
     image_url = db.Column(db.String(200))
     menu_items = db.relationship('MenuItem', backref='restaurant', lazy=True)
+    orders = db.relationship('Order', backref='restaurant', lazy=True)
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
