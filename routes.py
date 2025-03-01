@@ -1,7 +1,7 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
-from models import User, Restaurant, MenuItem
+from models import User, Restaurant, MenuItem, Order
 from forms import LoginForm, RegisterForm
 import logging
 
@@ -63,6 +63,117 @@ def restaurant_menu(id):
     return render_template('restaurants/menu.html', 
                          restaurant=restaurant, 
                          menu_items=menu_items)
+
+@app.route('/add_to_cart/<int:item_id>', methods=['POST'])
+@login_required
+def add_to_cart(item_id):
+    item = MenuItem.query.get_or_404(item_id)
+    cart = session.get('cart', {})
+
+    if str(item_id) in cart:
+        cart[str(item_id)]['quantity'] += 1
+    else:
+        cart[str(item_id)] = {
+            'name': item.name,
+            'price': item.price,
+            'quantity': 1,
+            'restaurant_name': item.restaurant.name,
+            'restaurant_id': item.restaurant_id
+        }
+
+    session['cart'] = cart
+    flash(f'{item.name} added to cart!')
+    return redirect(url_for('restaurant_menu', id=item.restaurant_id))
+
+@app.route('/cart')
+@login_required
+def view_cart():
+    cart = session.get('cart', {})
+    cart_items = []
+    total_amount = 0
+
+    for item_id, item_data in cart.items():
+        item_total = item_data['price'] * item_data['quantity']
+        cart_items.append({
+            'id': item_id,
+            'name': item_data['name'],
+            'price': item_data['price'],
+            'quantity': item_data['quantity'],
+            'restaurant_name': item_data['restaurant_name'],
+            'total': item_total
+        })
+        total_amount += item_total
+
+    return render_template('cart/cart.html', cart_items=cart_items, total_amount=total_amount)
+
+@app.route('/update_cart/<item_id>', methods=['POST'])
+@login_required
+def update_cart(item_id):
+    cart = session.get('cart', {})
+    action = request.json.get('action')
+
+    if str(item_id) in cart:
+        if action == 'increase':
+            cart[str(item_id)]['quantity'] += 1
+        elif action == 'decrease':
+            cart[str(item_id)]['quantity'] -= 1
+            if cart[str(item_id)]['quantity'] <= 0:
+                del cart[str(item_id)]
+
+    session['cart'] = cart
+    return jsonify({'success': True})
+
+@app.route('/remove_from_cart/<item_id>', methods=['POST'])
+@login_required
+def remove_from_cart(item_id):
+    cart = session.get('cart', {})
+    if str(item_id) in cart:
+        del cart[str(item_id)]
+    session['cart'] = cart
+    return jsonify({'success': True})
+
+@app.route('/place_order', methods=['POST'])
+@login_required
+def place_order():
+    cart = session.get('cart', {})
+    if not cart:
+        flash('Your cart is empty!')
+        return redirect(url_for('view_cart'))
+
+    try:
+        # Group items by restaurant
+        restaurant_orders = {}
+        for item_id, item_data in cart.items():
+            restaurant_id = item_data['restaurant_id']
+            if restaurant_id not in restaurant_orders:
+                restaurant_orders[restaurant_id] = {
+                    'items': [],
+                    'total': 0
+                }
+            item_total = item_data['price'] * item_data['quantity']
+            restaurant_orders[restaurant_id]['items'].append(item_data)
+            restaurant_orders[restaurant_id]['total'] += item_total
+
+        # Create orders for each restaurant
+        for restaurant_id, order_data in restaurant_orders.items():
+            order = Order(
+                user_id=current_user.id,
+                restaurant_id=restaurant_id,
+                total_amount=order_data['total']
+            )
+            db.session.add(order)
+
+        db.session.commit()
+        session['cart'] = {}
+        flash('Order placed successfully!')
+        return redirect(url_for('restaurants'))
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error placing order: {str(e)}")
+        flash('Error placing order. Please try again.')
+        return redirect(url_for('view_cart'))
+
 
 # Initialize sample data
 def init_sample_data():

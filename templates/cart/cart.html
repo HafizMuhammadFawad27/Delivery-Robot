@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Your Cart</h1>
+    
+    {% if cart_items %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Restaurant</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cart_items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.restaurant_name }}</td>
+                            <td>Rs. {{ "%.2f"|format(item.price) }}</td>
+                            <td>
+                                <div class="input-group" style="width: 120px;">
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="updateQuantity('{{ item.id }}', -1)">-</button>
+                                    <input type="number" class="form-control form-control-sm text-center" value="{{ item.quantity }}" readonly>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="updateQuantity('{{ item.id }}', 1)">+</button>
+                                </div>
+                            </td>
+                            <td>Rs. {{ "%.2f"|format(item.total) }}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="removeItem('{{ item.id }}')">Remove</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                            <td><strong>Rs. {{ "%.2f"|format(total_amount) }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <a href="{{ url_for('restaurants') }}" class="btn btn-secondary">Continue Shopping</a>
+                <form action="{{ url_for('place_order') }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-primary">Place Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <h3>Your cart is empty</h3>
+        <p class="lead mb-4">Add some delicious items to your cart!</p>
+        <a href="{{ url_for('restaurants') }}" class="btn btn-primary">Browse Restaurants</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
