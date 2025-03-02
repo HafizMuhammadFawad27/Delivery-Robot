@@ -5,13 +5,9 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-body">
-                <h2 class="card-title text-center mb-4">Register</h2>
+                <h2 class="card-title text-center mb-4">Restaurant Owner Login</h2>
                 <form method="POST">
                     {{ form.hidden_tag() }}
-                    <div class="mb-3">
-                        {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control") }}
-                    </div>
                     <div class="mb-3">
                         {{ form.email.label(class="form-label") }}
                         {{ form.email(class="form-control") }}
@@ -21,15 +17,18 @@
                         {{ form.password(class="form-control") }}
                     </div>
                     <div class="mb-3">
-                        {{ form.confirm_password.label(class="form-label") }}
-                        {{ form.confirm_password(class="form-control") }}
+                        {{ form.captcha.label(class="form-label") }}
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="{{ url_for('get_captcha') }}" alt="CAPTCHA" class="mb-2">
+                            {{ form.captcha(class="form-control") }}
+                        </div>
                     </div>
                     <div class="d-grid">
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
                 <div class="text-center mt-3">
-                    <p>Already have an account? <a href="{{ url_for('user_login') }}">Login here</a></p>
+                    <p>Don't have an account? <a href="{{ url_for('admin_register') }}">Register here</a></p>
                 </div>
             </div>
         </div>

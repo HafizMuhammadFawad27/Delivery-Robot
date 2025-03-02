@@ -22,13 +22,13 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'user_login'  
 
 # Drop all tables and recreate them
 with app.app_context():
     # Import models here to ensure they are registered
     from models import User, Restaurant, MenuItem, Order
-    db.drop_all()  # This will clear all tables
+    db.drop_all()  
     db.create_all()
 
     # Import routes after models to avoid circular imports

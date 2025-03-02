@@ -1,11 +1,17 @@
-from flask import render_template, redirect, url_for, flash, request, session, jsonify, abort
+from flask import render_template, redirect, url_for, flash, request, session, jsonify, abort, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from models import User, Restaurant, MenuItem, Order, OrderItem # Added OrderItem import
-from forms import LoginForm, RegisterForm
+from forms import UserLoginForm, AdminLoginForm, UserRegisterForm, AdminRegisterForm # Added new forms
 import logging
 from functools import wraps
 from datetime import datetime
+import random
+import string
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+
+logging.basicConfig(level=logging.DEBUG)
 
 def restaurant_owner_required(f):
     @wraps(f)
@@ -19,39 +25,89 @@ def restaurant_owner_required(f):
 def index():
     return render_template('index.html')
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+@app.route('/user/login', methods=['GET', 'POST'])
+def user_login():
     if current_user.is_authenticated:
         return redirect(url_for('restaurants'))
 
-    form = LoginForm()
+    form = UserLoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = User.query.filter_by(email=form.email.data, is_restaurant_owner=False).first()
         if user and user.check_password(form.password.data):
             login_user(user)
             return redirect(url_for('restaurants'))
         flash('Invalid email or password')
     return render_template('auth/login.html', form=form)
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if current_user.is_authenticated:
+        return redirect(url_for('restaurant_admin'))
+
+    form = AdminLoginForm()
+    if form.validate_on_submit():
+        if form.captcha.data != session.get('captcha'):
+            flash('Invalid CAPTCHA')
+            return render_template('auth/admin_login.html', form=form)
+
+        user = User.query.filter_by(email=form.email.data, is_restaurant_owner=True).first()
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            return redirect(url_for('restaurant_admin'))
+        flash('Invalid email or password')
+    return render_template('auth/admin_login.html', form=form)
+
+@app.route('/user/register', methods=['GET', 'POST'])
+def user_register():
     if current_user.is_authenticated:
         return redirect(url_for('restaurants'))
 
-    form = RegisterForm()
+    form = UserRegisterForm()
     if form.validate_on_submit():
         try:
-            user = User(username=form.username.data, email=form.email.data)
+            user = User(
+                username=form.username.data, 
+                email=form.email.data,
+                is_restaurant_owner=False
+            )
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
             flash('Registration successful!')
-            return redirect(url_for('login'))
+            return redirect(url_for('user_login'))
         except Exception as e:
             db.session.rollback()
             logging.error(f"Registration error: {str(e)}")
             flash('An error occurred during registration. Please try again.')
     return render_template('auth/register.html', form=form)
+
+@app.route('/admin/register', methods=['GET', 'POST'])
+def admin_register():
+    if current_user.is_authenticated:
+        return redirect(url_for('restaurant_admin'))
+
+    form = AdminRegisterForm()
+    if form.validate_on_submit():
+        if form.captcha.data != session.get('captcha'):
+            flash('Invalid CAPTCHA')
+            return render_template('auth/admin_register.html', form=form)
+
+        try:
+            user = User(
+                username=form.username.data, 
+                email=form.email.data,
+                is_restaurant_owner=True
+            )
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            flash('Registration successful!')
+            return redirect(url_for('admin_login'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Registration error: {str(e)}")
+            flash('An error occurred during registration. Please try again.')
+    return render_template('auth/admin_register.html', form=form)
 
 @app.route('/logout')
 @login_required
@@ -432,6 +488,32 @@ def order_details(order_id):
         flash('Error loading order details')
         return redirect(url_for('order_history'))
 
+
+@app.route('/captcha')
+def get_captcha():
+    # Generate random string
+    captcha_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    session['captcha'] = captcha_text
+
+    # Create image
+    image = Image.new('RGB', (200, 60), color='black')
+    draw = ImageDraw.Draw(image)
+
+    # Add noise
+    for i in range(500):
+        x = random.randint(0, 200)
+        y = random.randint(0, 60)
+        draw.point((x, y), fill='white')
+
+    # Add text
+    draw.text((40, 20), captcha_text, fill='white')
+
+    # Save to buffer
+    buffer = BytesIO()
+    image.save(buffer, format='PNG')
+    buffer.seek(0)
+
+    return send_file(buffer, mimetype='image/png')
 
 @app.route('/restaurant-admin')
 @login_required

@@ -3,17 +3,34 @@
 {% block content %}
 <div class="text-center py-5">
     <h1 class="display-4 mb-4">Welcome to Local Food Ordering</h1>
-    <p class="lead mb-4">Order delicious food from your favorite local restaurants and mess halls</p>
-    
-    {% if not current_user.is_authenticated %}
-    <div class="d-grid gap-3 col-lg-6 mx-auto">
-        <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login</a>
-        <a href="{{ url_for('register') }}" class="btn btn-outline-secondary btn-lg">Register</a>
+    <p class="lead mb-4">Choose how you want to proceed</p>
+
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Customer</h3>
+                    <p class="card-text">Order food from your favorite restaurants</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('user_login') }}" class="btn btn-primary">Login as Customer</a>
+                        <a href="{{ url_for('user_register') }}" class="btn btn-outline-secondary">Register as Customer</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Restaurant Owner</h3>
+                    <p class="card-text">Manage your restaurant and orders</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin_login') }}" class="btn btn-primary">Login as Owner</a>
+                        <a href="{{ url_for('admin_register') }}" class="btn btn-outline-secondary">Register as Owner</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <div class="d-grid gap-3 col-lg-6 mx-auto">
-        <a href="{{ url_for('restaurants') }}" class="btn btn-primary btn-lg">View Restaurants</a>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
