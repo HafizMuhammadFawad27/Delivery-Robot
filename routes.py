@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
-from models import User, Restaurant, MenuItem, Order
+from models import User, Restaurant, MenuItem, Order, OrderItem # Added OrderItem import
 from forms import LoginForm, RegisterForm
 import logging
 
@@ -151,7 +151,11 @@ def place_order():
                     'total': 0
                 }
             item_total = item_data['price'] * item_data['quantity']
-            restaurant_orders[restaurant_id]['items'].append(item_data)
+            restaurant_orders[restaurant_id]['items'].append({
+                'menu_item_id': int(item_id),
+                'quantity': item_data['quantity'],
+                'price': item_data['price']
+            })
             restaurant_orders[restaurant_id]['total'] += item_total
 
         # Create orders for each restaurant
@@ -162,18 +166,28 @@ def place_order():
                 total_amount=order_data['total']
             )
             db.session.add(order)
+            db.session.flush()  # Get order ID
+
+            # Create order items
+            for item in order_data['items']:
+                order_item = OrderItem(
+                    order_id=order.id,
+                    menu_item_id=item['menu_item_id'],
+                    quantity=item['quantity'],
+                    price=item['price']
+                )
+                db.session.add(order_item)
 
         db.session.commit()
         session['cart'] = {}
         flash('Order placed successfully!')
-        return redirect(url_for('restaurants'))
+        return redirect(url_for('order_history'))
 
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error placing order: {str(e)}")
         flash('Error placing order. Please try again.')
         return redirect(url_for('view_cart'))
-
 
 # Initialize sample data
 def init_sample_data():
@@ -369,14 +383,20 @@ def order_history():
 def order_details(order_id):
     try:
         order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
-        order_items = Order.query.join(MenuItem).filter(Order.id == order_id).all()
+
+        # Get order items with menu item details
+        order_items = OrderItem.query\
+            .join(MenuItem, OrderItem.menu_item_id == MenuItem.id)\
+            .filter(OrderItem.order_id == order_id)\
+            .all()
+
         order_items_list = []
         for item in order_items:
-             order_items_list.append({
+            order_items_list.append({
                 'name': item.menu_item.name,
                 'quantity': item.quantity,
-                'price': item.menu_item.price,
-                'total': item.menu_item.price * item.quantity
+                'price': item.price,
+                'total': item.price * item.quantity
             })
 
         return render_template('orders/details.html', 

@@ -35,11 +35,20 @@ class MenuItem(db.Model):
     category = db.Column(db.String(50))  # 'main', 'beverage', 'dessert'
     image_url = db.Column(db.String(200))
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    order_items = db.relationship('OrderItem', backref='menu_item', lazy=True)
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    status = db.Column(db.String(50), default='pending')
+    status = db.Column(db.String(50), default='pending')  # pending, preparing, ready, completed
     total_amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+    items = db.relationship('OrderItem', backref='order', lazy=True)
+
+class OrderItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_item.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)  # Price at time of order
