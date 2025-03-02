@@ -1,9 +1,19 @@
-from flask import render_template, redirect, url_for, flash, request, session, jsonify
+from flask import render_template, redirect, url_for, flash, request, session, jsonify, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from models import User, Restaurant, MenuItem, Order, OrderItem # Added OrderItem import
 from forms import LoginForm, RegisterForm
 import logging
+from functools import wraps
+from datetime import datetime
+
+def restaurant_owner_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_restaurant_owner:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def index():
@@ -193,6 +203,17 @@ def place_order():
 def init_sample_data():
     try:
         if Restaurant.query.first() is None:
+            # Create admin user for first restaurant
+            admin_user = User(
+                username="faisal_owner",
+                email="faisal@example.com",
+                is_restaurant_owner=True
+            )
+            admin_user.set_password("password123")
+            db.session.add(admin_user)
+            db.session.flush()  # Get user ID
+
+            # Create restaurants
             restaurants = [
                 {
                     "name": "Faisal Mess",
@@ -228,6 +249,10 @@ def init_sample_data():
                 db.session.add(restaurant)
                 db.session.flush()  # Get ID before commit
                 created_restaurants[restaurant.name] = restaurant.id
+
+                # Assign first restaurant to admin user
+                if restaurant.name == "Faisal Mess":
+                    admin_user.managed_restaurant_id = restaurant.id
 
             # Define menu items for each restaurant
             menu_items = {
@@ -406,3 +431,117 @@ def order_details(order_id):
         logging.error(f"Error fetching order details: {str(e)}")
         flash('Error loading order details')
         return redirect(url_for('order_history'))
+
+
+@app.route('/restaurant-admin')
+@login_required
+@restaurant_owner_required
+def restaurant_admin():
+    restaurant = current_user.managed_restaurant
+    if not restaurant:
+        flash('No restaurant assigned to your account')
+        return redirect(url_for('index'))
+
+    pending_orders = Order.query.filter_by(
+        restaurant_id=restaurant.id,
+        status='pending'
+    ).order_by(Order.created_at.desc()).all()
+
+    active_orders = Order.query.filter(
+        Order.restaurant_id == restaurant.id,
+        Order.status.in_(['preparing', 'ready'])
+    ).order_by(Order.created_at.desc()).all()
+
+    completed_orders = Order.query.filter_by(
+        restaurant_id=restaurant.id,
+        status='completed'
+    ).order_by(Order.created_at.desc()).limit(10).all()
+
+    return render_template('admin/dashboard.html',
+                         restaurant=restaurant,
+                         pending_orders=pending_orders,
+                         active_orders=active_orders,
+                         completed_orders=completed_orders)
+
+@app.route('/restaurant-admin/menu')
+@login_required
+@restaurant_owner_required
+def restaurant_menu_admin():
+    restaurant = current_user.managed_restaurant
+    menu_items = MenuItem.query.filter_by(restaurant_id=restaurant.id)\
+        .order_by(MenuItem.category).all()
+    return render_template('admin/menu.html', 
+                         restaurant=restaurant,
+                         menu_items=menu_items)
+
+@app.route('/restaurant-admin/menu/add', methods=['GET', 'POST'])
+@login_required
+@restaurant_owner_required
+def add_menu_item():
+    if request.method == 'POST':
+        try:
+            item = MenuItem(
+                name=request.form['name'],
+                description=request.form['description'],
+                price=float(request.form['price']),
+                category=request.form['category'],
+                image_url=request.form['image_url'],
+                restaurant_id=current_user.managed_restaurant.id
+            )
+            db.session.add(item)
+            db.session.commit()
+            flash('Menu item added successfully!')
+            return redirect(url_for('restaurant_menu_admin'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding menu item')
+            logging.error(f"Error adding menu item: {str(e)}")
+
+    return render_template('admin/add_menu_item.html')
+
+@app.route('/restaurant-admin/menu/edit/<int:item_id>', methods=['GET', 'POST'])
+@login_required
+@restaurant_owner_required
+def edit_menu_item(item_id):
+    item = MenuItem.query.get_or_404(item_id)
+    if item.restaurant_id != current_user.managed_restaurant.id:
+        abort(403)
+
+    if request.method == 'POST':
+        try:
+            item.name = request.form['name']
+            item.description = request.form['description']
+            item.price = float(request.form['price'])
+            item.category = request.form['category']
+            item.image_url = request.form['image_url']
+            item.is_available = 'is_available' in request.form
+            db.session.commit()
+            flash('Menu item updated successfully!')
+            return redirect(url_for('restaurant_menu_admin'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating menu item')
+            logging.error(f"Error updating menu item: {str(e)}")
+
+    return render_template('admin/edit_menu_item.html', item=item)
+
+@app.route('/restaurant-admin/order/<int:order_id>/update-status', methods=['POST'])
+@login_required
+@restaurant_owner_required
+def update_order_status(order_id):
+    order = Order.query.get_or_404(order_id)
+    if order.restaurant_id != current_user.managed_restaurant.id:
+        abort(403)
+
+    new_status = request.form.get('status')
+    if new_status in ['pending', 'preparing', 'ready', 'completed']:
+        try:
+            order.status = new_status
+            db.session.commit()
+            flash('Order status updated successfully!')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating order status')
+            logging.error(f"Error updating order status: {str(e)}")
+
+    return redirect(url_for('restaurant_admin'))

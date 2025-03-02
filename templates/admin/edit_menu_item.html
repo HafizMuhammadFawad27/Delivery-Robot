@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">Edit Menu Item</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ item.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                    rows="3" required>{{ item.description }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="price" class="form-label">Price (Rs.)</label>
+                            <input type="number" step="0.01" class="form-control" id="price" 
+                                   name="price" value="{{ "%.2f"|format(item.price) }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="main" {% if item.category == 'main' %}selected{% endif %}>Main Dish</option>
+                                <option value="beverage" {% if item.category == 'beverage' %}selected{% endif %}>Beverage</option>
+                                <option value="dessert" {% if item.category == 'dessert' %}selected{% endif %}>Dessert</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="image_url" class="form-label">Image URL</label>
+                            <input type="url" class="form-control" id="image_url" name="image_url" 
+                                   value="{{ item.image_url }}" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_available" 
+                                   name="is_available" {% if item.is_available %}checked{% endif %}>
+                            <label class="form-check-label" for="is_available">Available</label>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Update Menu Item</button>
+                            <a href="{{ url_for('restaurant_menu_admin') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

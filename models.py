@@ -1,6 +1,7 @@
 from app import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 @login_manager.user_loader
 def load_user(id):
@@ -11,6 +12,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
+    is_admin = db.Column(db.Boolean, default=False)
+    is_restaurant_owner = db.Column(db.Boolean, default=False)
+    managed_restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
     orders = db.relationship('Order', backref='customer', lazy=True)
 
     def set_password(self, password):
@@ -26,6 +30,8 @@ class Restaurant(db.Model):
     image_url = db.Column(db.String(200))
     menu_items = db.relationship('MenuItem', backref='restaurant', lazy=True)
     orders = db.relationship('Order', backref='restaurant', lazy=True)
+    managers = db.relationship('User', backref='managed_restaurant', lazy=True,
+                             foreign_keys=[User.managed_restaurant_id])
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -36,6 +42,7 @@ class MenuItem(db.Model):
     image_url = db.Column(db.String(200))
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     order_items = db.relationship('OrderItem', backref='menu_item', lazy=True)
+    is_available = db.Column(db.Boolean, default=True)
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
