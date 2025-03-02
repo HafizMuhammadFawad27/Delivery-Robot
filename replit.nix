@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.vercel-pkg
     pkgs.zlib
     pkgs.tk
     pkgs.tcl
